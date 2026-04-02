@@ -8,4 +8,7 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: false,
   },
+  resolve: {
+    dedupe: ['react', 'react-dom'],
+  },
 });
