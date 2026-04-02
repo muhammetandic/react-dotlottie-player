@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { DotLottiePlayer } from "@mhmmt/react-dotlottie-player";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
+// @ts-ignore
+import dark from "react-syntax-highlighter/dist/esm/styles/prism/dark";
 
 function CodeBlock({
   children,
@@ -22,7 +23,7 @@ function CodeBlock({
     <div className="code-block-wrapper">
       <SyntaxHighlighter
         language={language}
-        style={vscDarkPlus}
+        style={dark}
         customStyle={{
           margin: "1rem 0",
           borderRadius: "8px",
