@@ -101,18 +101,43 @@ body {
   color: var(--text);
 }
 
-.code-block {
-  background: #0f0f1a;
-  border-radius: 8px;
-  padding: 1rem;
-  overflow-x: auto;
-  margin: 1rem 0;
+.code-block-wrapper {
+  position: relative;
 }
 
-.code-block code {
-  font-family: 'Fira Code', 'Monaco', monospace;
+.copy-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: rgba(102, 126, 234, 0.3);
+  color: var(--text);
+  border: none;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.copy-btn:hover {
+  background: rgba(102, 126, 234, 0.5);
+}
+
+.install-options {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.install-option {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.install-label {
+  font-weight: 600;
   font-size: 0.875rem;
-  color: #a8d8ea;
+  color: var(--text-muted);
 }
 
 .install-cmd {

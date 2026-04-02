@@ -121,10 +121,20 @@ export function useDotLottie({
     if (!src || !containerRef.current) return;
 
     let animation: AnimationItem | null = null;
+    let destroyed = false;
 
     const loadAnimation = async () => {
       try {
+        if (destroyed) return;
+
         const animationData = await fetchAnimationData(srcRef.current);
+
+        if (destroyed || !containerRef.current) return;
+
+        if (animationRef.current) {
+          animationRef.current.destroy();
+          animationRef.current = null;
+        }
 
         const config = {
           container: containerRef.current!,
@@ -198,6 +208,7 @@ export function useDotLottie({
     loadAnimation();
 
     return () => {
+      destroyed = true;
       animation?.destroy();
       animationRef.current = null;
       setIsLoaded(false);

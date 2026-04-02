@@ -1,5 +1,43 @@
-import { useState } from 'react';
-import { DotLottiePlayer } from '@mhmmt/react-dotlottie-player';
+import { useState } from "react";
+import { DotLottiePlayer } from "@mhmmt/react-dotlottie-player";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
+
+function CodeBlock({
+  children,
+  language = "tsx",
+}: {
+  children: string;
+  language?: string;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(children);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="code-block-wrapper">
+      <SyntaxHighlighter
+        language={language}
+        style={vscDarkPlus}
+        customStyle={{
+          margin: "1rem 0",
+          borderRadius: "8px",
+          fontSize: "0.75rem",
+          background: "#0f0f1a",
+        }}
+      >
+        {children}
+      </SyntaxHighlighter>
+      <button className="copy-btn" onClick={handleCopy}>
+        {copied ? "Copied!" : "Copy"}
+      </button>
+    </div>
+  );
+}
 
 function Navigation() {
   return (
@@ -26,11 +64,9 @@ function Hero() {
         <div className="hero-badge">v0.1.0</div>
         <h1>React DotLottie Player</h1>
         <p>
-          Play Lottie animations in React — supports both <code>.json</code> and <code>.lottie</code> files
+          Play Lottie animations in React — supports both <code>.json</code> and{" "}
+          <code>.lottie</code> files
         </p>
-        <div className="install-cmd">
-          <span>npm install</span> @mhmmt/react-dotlottie-player
-        </div>
       </div>
     </header>
   );
@@ -42,25 +78,34 @@ function InstallationSection() {
       <div className="container">
         <h2 className="section-title">Installation</h2>
         <p className="section-desc">Get started in seconds</p>
-        
+
         <div className="card">
-          <h3>1. Install the package</h3>
-          <div className="code-block">
-            <code>npm install @mhmmt/react-dotlottie-player</code>
+          <div className="install-options">
+            <div className="install-option">
+              <span className="install-label">npm</span>
+              <CodeBlock language="bash">
+                npm install @mhmmt/react-dotlottie-player
+              </CodeBlock>
+            </div>
+            <div className="install-option">
+              <span className="install-label">pnpm</span>
+              <CodeBlock language="bash">
+                pnpm add @mhmmt/react-dotlottie-player
+              </CodeBlock>
+            </div>
+            <div className="install-option">
+              <span className="install-label">yarn</span>
+              <CodeBlock language="bash">
+                yarn add @mhmmt/react-dotlottie-player
+              </CodeBlock>
+            </div>
           </div>
         </div>
-        
+
         <div className="card">
-          <h3>2. Ensure React peer dependency</h3>
-          <div className="code-block">
-            <code>npm install react react-dom</code>
-          </div>
-        </div>
-        
-        <div className="card">
-          <h3>3. That's it!</h3>
-          <p style={{ color: 'var(--text-muted)' }}>
-            No additional configuration required. The package works out of the box.
+          <p style={{ color: "var(--text-muted)" }}>
+            No additional configuration required. The package works out of the
+            box.
           </p>
         </div>
       </div>
@@ -74,11 +119,10 @@ function UsageSection() {
       <div className="container">
         <h2 className="section-title">Usage</h2>
         <p className="section-desc">Simple and intuitive API</p>
-        
+
         <div className="card">
           <h3>Basic Example</h3>
-          <div className="code-block">
-            <code>{`import { DotLottiePlayer } from '@mhmmt/react-dotlottie-player';
+          <CodeBlock>{`import { DotLottiePlayer } from '@mhmmt/react-dotlottie-player';
 
 function App() {
   return (
@@ -88,14 +132,12 @@ function App() {
       autoplay
     />
   );
-}`}</code>
-          </div>
+}`}</CodeBlock>
         </div>
-        
+
         <div className="card">
           <h3>With Callbacks</h3>
-          <div className="code-block">
-            <code>{`function App() {
+          <CodeBlock>{`function App() {
   return (
     <DotLottiePlayer
       src="/animation.json"
@@ -106,25 +148,24 @@ function App() {
       onError={(error) => console.error(error)}
     />
   );
-}`}</code>
-          </div>
+}`}</CodeBlock>
         </div>
       </div>
     </section>
   );
 }
 
-function DemoCard({ 
-  title, 
-  description, 
+function DemoCard({
+  title,
+  description,
   src,
   showLoop = false,
   showSpeed = false,
   defaultLoop = false,
   defaultAutoplay = true,
-}: { 
-  title: string; 
-  description: string; 
+}: {
+  title: string;
+  description: string;
   src: string;
   showLoop?: boolean;
   showSpeed?: boolean;
@@ -169,7 +210,10 @@ function DemoCard({
             </label>
           )}
           {showSpeed && (
-            <select value={speed} onChange={(e) => setSpeed(Number(e.target.value))}>
+            <select
+              value={speed}
+              onChange={(e) => setSpeed(Number(e.target.value))}
+            >
               <option value={0.5}>0.5x</option>
               <option value={1}>1x</option>
               <option value={2}>2x</option>
@@ -187,22 +231,23 @@ function DemosSection() {
       <div className="container">
         <h2 className="section-title">Interactive Demos</h2>
         <p className="section-desc">Try it yourself with different options</p>
-        
+
         <div className="demo-grid">
           <DemoCard
-            title="Loading Animation"
-            description="Basic looping animation with controls"
-            src="/samples/loading.json"
+            title="JSON Animation"
+            description="Standard Lottie .json file with loop and speed controls"
+            src="/samples/sample.json"
             showLoop
             showSpeed
             defaultLoop
           />
           <DemoCard
-            title="Success Animation"
-            description="One-shot success checkmark animation"
-            src="/samples/success.json"
-            defaultLoop={false}
-            defaultAutoplay
+            title="Lottie Animation"
+            description="Compressed .lottie file with loop and speed controls"
+            src="/samples/sample.lottie"
+            showLoop
+            showSpeed
+            defaultLoop
           />
         </div>
       </div>
@@ -212,17 +257,67 @@ function DemosSection() {
 
 function PropsSection() {
   const props = [
-    { name: 'src', type: 'string', required: true, desc: 'URL to .json or .lottie file' },
-    { name: 'loop', type: 'boolean', default: 'false', desc: 'Loop animation playback' },
-    { name: 'autoplay', type: 'boolean', default: 'true', desc: 'Auto-play when loaded' },
-    { name: 'speed', type: 'number', default: '1', desc: 'Playback speed multiplier' },
-    { name: 'direction', type: '1 | -1', default: '1', desc: 'Playback direction' },
-    { name: 'backgroundColor', type: 'string', default: "'transparent'", desc: 'Container background' },
-    { name: 'onLoad', type: '() => void', desc: 'Callback when animation loads' },
-    { name: 'onError', type: '(error: Error) => void', desc: 'Callback on error' },
-    { name: 'onComplete', type: '() => void', desc: 'Callback when animation completes' },
-    { name: 'onLoopComplete', type: '() => void', desc: 'Callback when loop completes' },
-    { name: 'onFrame', type: '(frame: number) => void', desc: 'Callback on each frame' },
+    {
+      name: "src",
+      type: "string",
+      required: true,
+      desc: "URL to .json or .lottie file",
+    },
+    {
+      name: "loop",
+      type: "boolean",
+      default: "false",
+      desc: "Loop animation playback",
+    },
+    {
+      name: "autoplay",
+      type: "boolean",
+      default: "true",
+      desc: "Auto-play when loaded",
+    },
+    {
+      name: "speed",
+      type: "number",
+      default: "1",
+      desc: "Playback speed multiplier",
+    },
+    {
+      name: "direction",
+      type: "1 | -1",
+      default: "1",
+      desc: "Playback direction",
+    },
+    {
+      name: "backgroundColor",
+      type: "string",
+      default: "'transparent'",
+      desc: "Container background",
+    },
+    {
+      name: "onLoad",
+      type: "() => void",
+      desc: "Callback when animation loads",
+    },
+    {
+      name: "onError",
+      type: "(error: Error) => void",
+      desc: "Callback on error",
+    },
+    {
+      name: "onComplete",
+      type: "() => void",
+      desc: "Callback when animation completes",
+    },
+    {
+      name: "onLoopComplete",
+      type: "() => void",
+      desc: "Callback when loop completes",
+    },
+    {
+      name: "onFrame",
+      type: "(frame: number) => void",
+      desc: "Callback on each frame",
+    },
   ];
 
   return (
@@ -230,7 +325,7 @@ function PropsSection() {
       <div className="container">
         <h2 className="section-title">Props</h2>
         <p className="section-desc">All available component props</p>
-        
+
         <div className="card">
           <table className="props-table">
             <thead>
@@ -244,9 +339,13 @@ function PropsSection() {
             <tbody>
               {props.map((prop) => (
                 <tr key={prop.name}>
-                  <td><code>{prop.name}</code></td>
-                  <td><span className="type-tag">{prop.type}</span></td>
-                  <td>{prop.default || '—'}</td>
+                  <td>
+                    <code>{prop.name}</code>
+                  </td>
+                  <td>
+                    <span className="type-tag">{prop.type}</span>
+                  </td>
+                  <td>{prop.default || "—"}</td>
                   <td>{prop.desc}</td>
                 </tr>
               ))}
@@ -263,8 +362,12 @@ function Footer() {
     <footer>
       <div className="container">
         <p>
-          Built by <a href="https://github.com/muhammetandic">@muhammetandic</a> • 
-          <a href="https://github.com/muhammetandic/react-dotlottie-player"> View on GitHub</a>
+          Built by <a href="https://github.com/muhammetandic">@muhammetandic</a>{" "}
+          •
+          <a href="https://github.com/muhammetandic/react-dotlottie-player">
+            {" "}
+            View on GitHub
+          </a>
         </p>
       </div>
     </footer>
