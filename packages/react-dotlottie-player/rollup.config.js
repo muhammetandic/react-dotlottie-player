@@ -7,6 +7,11 @@ import dts from 'rollup-plugin-dts';
 
 const production = !process.env.ROLLUP_WATCH;
 
+const onwarn = (warning, warn) => {
+  if (warning.code === 'EVAL') return;
+  warn(warning);
+};
+
 export default [
   {
     input: 'src/index.ts',
@@ -15,6 +20,7 @@ export default [
       format: 'esm',
       sourcemap: true,
     },
+    onwarn,
     plugins: [
       replace({
         preventAssignment: true,
@@ -40,6 +46,7 @@ export default [
       sourcemap: true,
       exports: 'named',
     },
+    onwarn,
     plugins: [
       resolve({
         browser: true,

@@ -237,7 +237,7 @@ function DemosSection() {
           <DemoCard
             title="JSON Animation"
             description="Standard Lottie .json file with loop and speed controls"
-            src="./samples/sample.json"
+            src="./samples/travel.json"
             showLoop
             showSpeed
             defaultLoop
@@ -245,7 +245,7 @@ function DemosSection() {
           <DemoCard
             title="Lottie Animation"
             description="Compressed .lottie file with loop and speed controls"
-            src="./samples/sample.lottie"
+            src="./samples/travel.lottie"
             showLoop
             showSpeed
             defaultLoop

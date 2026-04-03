@@ -1,0 +1,13 @@
+{
+  "name": "react-dotlottie-player-monorepo",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "demo"
+  ],
+  "scripts": {
+    "install:all": "npm install",
+    "dev:demo": "npm run dev --workspace=demo",
+    "build:package": "npm run build --workspace=@mhmmt/react-dotlottie-player"
+  }
+}

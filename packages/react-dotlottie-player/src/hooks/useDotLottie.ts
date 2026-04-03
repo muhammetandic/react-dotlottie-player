@@ -31,7 +31,7 @@ interface UseDotLottieReturn {
   isLoaded: boolean;
   isPlaying: boolean;
   currentFrame: number;
-  containerRef: React.RefObject<HTMLDivElement>;
+  containerRef: React.RefObject<HTMLDivElement | null>;
   animationData: AnimationItem | null;
 }
 
@@ -40,12 +40,12 @@ const isLottieFile = (src: string): boolean => {
   return extension === 'lottie';
 };
 
-const fetchAnimationData = async (src: string): Promise<object | string> => {
+const fetchAnimationData = async (src: string, objectUrls: string[]): Promise<object | string> => {
   if (isLottieFile(src)) {
     const { entries } = await unzip(src);
     
     let manifest = null;
-    let animationData = null;
+    let animationData: any = null;
     
     for (const entry of Object.values(entries)) {
       const name = entry.name.toLowerCase();
@@ -56,22 +56,38 @@ const fetchAnimationData = async (src: string): Promise<object | string> => {
       }
     }
     
-    if (manifest && animationData) {
+    if (manifest) {
       const animationUrl = (manifest as { animations?: Array<{ id: string; file: string }> }).animations?.[0]?.file;
       if (animationUrl) {
         for (const entry of Object.values(entries)) {
           if (entry.name === animationUrl) {
-            return await entry.json();
+            animationData = await entry.json();
+            break;
           }
         }
       }
     }
     
-    if (animationData) {
-      return animationData;
+    if (!animationData) {
+      throw new Error('Invalid .lottie file: no animation data found');
     }
-    
-    throw new Error('Invalid .lottie file: no animation data found');
+
+    if (animationData.assets && Array.isArray(animationData.assets)) {
+      for (const asset of animationData.assets) {
+        if (asset.p && typeof asset.p === 'string') {
+          const imageEntry = Object.values(entries).find(e => e.name.endsWith(asset.p));
+          if (imageEntry) {
+            const blob = await imageEntry.blob();
+            const objectUrl = URL.createObjectURL(blob);
+            objectUrls.push(objectUrl);
+            asset.p = objectUrl;
+            asset.u = '';
+          }
+        }
+      }
+    }
+
+    return animationData;
   }
   
   const response = await fetch(src);
@@ -103,6 +119,7 @@ export function useDotLottie({
 }: UseDotLottieOptions): UseDotLottieReturn {
   const containerRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<AnimationItem | null>(null);
+  const objectUrlsRef = useRef<string[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentFrame, setCurrentFrame] = useState(0);
@@ -112,6 +129,13 @@ export function useDotLottie({
   useEffect(() => {
     srcRef.current = src;
   }, [src]);
+
+  useEffect(() => {
+    return () => {
+      objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+      objectUrlsRef.current = [];
+    };
+  }, []);
 
   useEffect(() => {
     callbacksRef.current = { onLoad, onError, onComplete, onLoopComplete, onFrame, onEnterFrame };
@@ -127,7 +151,10 @@ export function useDotLottie({
       try {
         if (destroyed) return;
 
-        const animationData = await fetchAnimationData(srcRef.current);
+        objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+        objectUrlsRef.current = [];
+
+        const animationData = await fetchAnimationData(srcRef.current, objectUrlsRef.current);
 
         if (destroyed || !containerRef.current) return;
 
@@ -256,6 +283,8 @@ export function useDotLottie({
     setIsLoaded(false);
     setIsPlaying(false);
     setCurrentFrame(0);
+    objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+    objectUrlsRef.current = [];
   }, []);
 
   return {
