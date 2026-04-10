@@ -41,7 +41,7 @@ export const DotLottiePlayer = forwardRef<HTMLDivElement, DotLottiePlayerProps>(
     return (
       <div
         ref={(node) => {
-          (containerRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+          (containerRef as React.RefObject<HTMLDivElement | null>).current = node;
           if (typeof ref === 'function') {
             ref(node);
           } else if (ref) {

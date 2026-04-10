@@ -1,6 +1,6 @@
 {
   "name": "@mhmmt/react-dotlottie-player",
-  "version": "0.1.1",
+  "version": "0.1.3",
   "description": "Play Lottie animations in React — supports both .json and .lottie files",
   "type": "module",
   "main": "./dist/react-dotlottie-player.cjs.js",
