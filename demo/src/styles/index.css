@@ -1,11 +1,18 @@
 :root {
-  --primary: #667eea;
-  --primary-dark: #5a6fd6;
-  --bg-dark: #1a1a2e;
-  --bg-card: #252542;
-  --text: #eee;
-  --text-muted: #888;
-  --success: #2ecc71;
+  --primary: #7aa2f7;
+  --primary-dark: #5a7fd6;
+  --bg-dark: #1a1b26;
+  --bg-alt: #16161e;
+  --bg-soft: #24283b;
+  --bg-card: #1f2335;
+  --text: #c0caf5;
+  --text-muted: #565f89;
+  --success: #9ece6a;
+  --error: #f7768e;
+  --warning: #e0af68;
+  --accent: #bb9af7;
+  --cyan: #7dcfff;
+  --orange: #ff9e64;
   --radius: 12px;
   --max-width: 1200px;
 }
@@ -44,7 +51,7 @@ body {
   font-size: 3.5rem;
   font-weight: 800;
   margin-bottom: 1rem;
-  background: linear-gradient(135deg, var(--primary) 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -59,7 +66,7 @@ body {
 
 .hero-badge {
   display: inline-block;
-  background: rgba(102, 126, 234, 0.2);
+  background: rgba(122, 162, 247, 0.2);
   color: var(--primary);
   padding: 0.5rem 1rem;
   border-radius: 50px;
@@ -109,7 +116,7 @@ body {
   position: absolute;
   top: 0.5rem;
   right: 0.5rem;
-  background: rgba(102, 126, 234, 0.3);
+  background: rgba(122, 162, 247, 0.3);
   color: var(--text);
   border: none;
   padding: 0.25rem 0.5rem;
@@ -120,7 +127,7 @@ body {
 }
 
 .copy-btn:hover {
-  background: rgba(102, 126, 234, 0.5);
+  background: rgba(122, 162, 247, 0.5);
 }
 
 .install-options {
@@ -142,7 +149,7 @@ body {
 
 .install-cmd {
   font-family: 'Fira Code', monospace;
-  background: #0f0f1a;
+  background: var(--bg-alt);
   padding: 1rem 1.5rem;
   border-radius: 8px;
   display: inline-block;
@@ -167,7 +174,7 @@ body {
 }
 
 .demo-preview {
-  background: var(--bg-dark);
+  background: var(--bg-alt);
   padding: 2rem;
   display: flex;
   align-items: center;
@@ -213,7 +220,7 @@ body {
 
 button {
   background: var(--primary);
-  color: white;
+  color: var(--bg-dark);
   border: none;
   padding: 0.5rem 1rem;
   border-radius: 8px;
@@ -232,8 +239,8 @@ button:disabled {
 }
 
 select {
-  background: #333;
-  color: white;
+  background: var(--bg-soft);
+  color: var(--text);
   border: none;
   padding: 0.5rem 1rem;
   border-radius: 8px;
@@ -267,17 +274,17 @@ select {
 }
 
 .props-table code {
-  background: #0f0f1a;
+  background: var(--bg-alt);
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
   font-family: 'Fira Code', monospace;
   font-size: 0.8rem;
-  color: #a8d8ea;
+  color: var(--cyan);
 }
 
 .type-tag {
   display: inline-block;
-  background: rgba(102, 126, 234, 0.2);
+  background: rgba(122, 162, 247, 0.2);
   color: var(--primary);
   padding: 0.2rem 0.5rem;
   border-radius: 4px;
@@ -304,7 +311,7 @@ footer a:hover {
 .nav {
   position: sticky;
   top: 0;
-  background: rgba(26, 26, 46, 0.95);
+  background: rgba(26, 27, 38, 0.95);
   backdrop-filter: blur(10px);
   padding: 1rem 2rem;
   border-bottom: 1px solid rgba(255,255,255,0.05);
