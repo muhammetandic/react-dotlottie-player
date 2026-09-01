@@ -25,7 +25,7 @@ interface UseDotLottieReturn {
     destroy: () => void;
     isLoaded: boolean;
     isPlaying: boolean;
-    currentFrame: number;
+    getCurrentFrame: () => number;
     containerRef: React.RefObject<HTMLDivElement | null>;
     animationData: AnimationItem | null;
 }

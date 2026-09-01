@@ -30,17 +30,18 @@ interface UseDotLottieReturn {
   destroy: () => void;
   isLoaded: boolean;
   isPlaying: boolean;
-  currentFrame: number;
+  getCurrentFrame: () => number;
   containerRef: React.RefObject<HTMLDivElement | null>;
   animationData: AnimationItem | null;
 }
 
 const isLottieFile = (src: string): boolean => {
-  const extension = src.split('.').pop()?.toLowerCase();
+  const path = src.split(/[?#]/)[0];
+  const extension = path.split('.').pop()?.toLowerCase();
   return extension === 'lottie';
 };
 
-const fetchAnimationData = async (src: string, objectUrls: string[]): Promise<object | string> => {
+const fetchAnimationData = async (src: string, objectUrls: string[]): Promise<object> => {
   if (isLottieFile(src)) {
     const { entries } = await unzip(src);
     
@@ -94,13 +95,8 @@ const fetchAnimationData = async (src: string, objectUrls: string[]): Promise<ob
   if (!response.ok) {
     throw new Error(`Failed to fetch animation: ${response.statusText}`);
   }
-  
-  const contentType = response.headers.get('content-type') || '';
-  if (contentType.includes('application/json') || src.endsWith('.json')) {
-    return await response.json();
-  }
-  
-  return src;
+
+  return await response.json();
 };
 
 export function useDotLottie({
@@ -122,9 +118,10 @@ export function useDotLottie({
   const objectUrlsRef = useRef<string[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentFrame, setCurrentFrame] = useState(0);
+  const currentFrameRef = useRef(0);
   const srcRef = useRef(src);
   const callbacksRef = useRef({ onLoad, onError, onComplete, onLoopComplete, onFrame, onEnterFrame });
+  const configRef = useRef({ loop, speed, direction });
 
   useEffect(() => {
     srcRef.current = src;
@@ -140,6 +137,27 @@ export function useDotLottie({
   useEffect(() => {
     callbacksRef.current = { onLoad, onError, onComplete, onLoopComplete, onFrame, onEnterFrame };
   }, [onLoad, onError, onComplete, onLoopComplete, onFrame, onEnterFrame]);
+
+  const applyLiveConfig = useCallback((cfg: { loop: boolean; speed: number; direction: 1 | -1 }) => {
+    const animation = animationRef.current;
+    if (!animation) return;
+    animation.loop = cfg.loop;
+    animation.setSpeed(cfg.speed);
+    animation.setDirection(cfg.direction);
+  }, []);
+
+  // Apply loop/speed/direction imperatively to the live animation instead of
+  // reloading it — a full reload re-fetches src and restarts playback.
+  useEffect(() => {
+    configRef.current = { loop, speed, direction };
+    applyLiveConfig({ loop, speed, direction });
+  }, [loop, speed, direction, applyLiveConfig]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    container.style.backgroundColor = backgroundColor === 'transparent' ? '' : backgroundColor;
+  }, [backgroundColor]);
 
   useEffect(() => {
     if (!src || !containerRef.current) return;
@@ -166,7 +184,6 @@ export function useDotLottie({
         const config = {
           container: containerRef.current!,
           renderer: 'svg' as const,
-          loop,
           autoplay: false,
           animationData,
           rendererSettings: {
@@ -179,20 +196,12 @@ export function useDotLottie({
         animation = lottie.loadAnimation(config as Parameters<typeof lottie.loadAnimation>[0]);
         animationRef.current = animation;
 
-        animation.setSpeed(speed);
-        animation.setDirection(direction);
-
-        if (backgroundColor !== 'transparent') {
-          const container = containerRef.current;
-          if (container) {
-            container.style.backgroundColor = backgroundColor;
-          }
-        }
+        applyLiveConfig(configRef.current);
 
         animation.addEventListener('DOMLoaded', () => {
           setIsLoaded(true);
           callbacksRef.current.onLoad?.();
-          
+
           if (autoplay) {
             animation?.play();
           }
@@ -209,7 +218,7 @@ export function useDotLottie({
 
         animation.addEventListener('enterFrame', (e) => {
           const frame = (e as { currentTime: number }).currentTime;
-          setCurrentFrame(frame);
+          currentFrameRef.current = frame;
           callbacksRef.current.onFrame?.(frame);
           callbacksRef.current.onEnterFrame?.(frame);
         });
@@ -224,7 +233,7 @@ export function useDotLottie({
 
         animation.addEventListener('stop' as any, () => {
           setIsPlaying(false);
-          setCurrentFrame(0);
+          currentFrameRef.current = 0;
         });
 
       } catch (error) {
@@ -241,7 +250,7 @@ export function useDotLottie({
       setIsLoaded(false);
       setIsPlaying(false);
     };
-  }, [src, loop, speed, direction, backgroundColor, autoplay]);
+  }, [src, autoplay, applyLiveConfig]);
 
   const play = useCallback(() => {
     animationRef.current?.play();
@@ -277,12 +286,14 @@ export function useDotLottie({
     return anim.getDuration(inFrames);
   }, []);
 
+  const getCurrentFrame = useCallback(() => currentFrameRef.current, []);
+
   const destroy = useCallback(() => {
     animationRef.current?.destroy();
     animationRef.current = null;
     setIsLoaded(false);
     setIsPlaying(false);
-    setCurrentFrame(0);
+    currentFrameRef.current = 0;
     objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
     objectUrlsRef.current = [];
   }, []);
@@ -299,7 +310,7 @@ export function useDotLottie({
     destroy,
     isLoaded,
     isPlaying,
-    currentFrame,
+    getCurrentFrame,
     containerRef,
     animationData: animationRef.current,
   };
