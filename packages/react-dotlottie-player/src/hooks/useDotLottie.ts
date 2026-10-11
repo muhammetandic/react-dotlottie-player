@@ -1,7 +1,35 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import lottie from 'lottie-web';
-import type { AnimationItem } from 'lottie-web';
+import type { AnimationEventCallback, AnimationEventName, AnimationItem } from 'lottie-web';
 import { unzip } from 'unzipit';
+
+/** Minimal shape of a Lottie asset entry (image or precomp). */
+interface LottieAsset {
+  /** Asset path/name. */
+  p?: string;
+  /** Asset base path. */
+  u?: string;
+  [key: string]: unknown;
+}
+
+/** Minimal shape of the Lottie animation JSON this hook consumes. */
+interface LottieAnimationData {
+  assets?: LottieAsset[];
+  [key: string]: unknown;
+}
+
+// lottie-web emits `play`/`pause`/`stop` at runtime, but its
+// `AnimationEventName` union omits them. Confine the one necessary cast to this
+// helper instead of using `as any` at every call site.
+type LifecycleEvent = 'play' | 'pause' | 'stop';
+
+const onLifecycle = (
+  animation: AnimationItem,
+  event: LifecycleEvent,
+  handler: () => void
+): void => {
+  animation.addEventListener(event as AnimationEventName, handler as AnimationEventCallback);
+};
 
 interface UseDotLottieOptions {
   src: string;
@@ -31,8 +59,8 @@ interface UseDotLottieReturn {
   isLoaded: boolean;
   isPlaying: boolean;
   getCurrentFrame: () => number;
+  getAnimation: () => AnimationItem | null;
   containerRef: React.RefObject<HTMLDivElement | null>;
-  animationData: AnimationItem | null;
 }
 
 const isLottieFile = (src: string): boolean => {
@@ -41,34 +69,63 @@ const isLottieFile = (src: string): boolean => {
   return extension === 'lottie';
 };
 
-const fetchAnimationData = async (src: string, objectUrls: string[]): Promise<object> => {
+const fetchAnimationData = async (
+  src: string,
+  objectUrls: string[]
+): Promise<LottieAnimationData> => {
   if (isLottieFile(src)) {
     const { entries } = await unzip(src);
     
-    let manifest = null;
-    let animationData: any = null;
-    
-    for (const entry of Object.values(entries)) {
-      const name = entry.name.toLowerCase();
-      if (name === 'manifest.json') {
-        manifest = await entry.json();
-      } else if (name.endsWith('.json')) {
-        animationData = await entry.json();
-      }
+    const entryList = Object.values(entries);
+    const normalizePath = (path: string): string =>
+      path.replace(/\\/g, '/').replace(/^\.?\//, '').toLowerCase();
+
+    const findEntry = (path: string) => {
+      const target = normalizePath(path);
+      const targetBase = target.split('/').pop();
+      return (
+        entryList.find((entry) => normalizePath(entry.name) === target) ??
+        entryList.find((entry) => normalizePath(entry.name).split('/').pop() === targetBase)
+      );
+    };
+
+    const manifestEntry = entryList.find(
+      (entry) => normalizePath(entry.name) === 'manifest.json'
+    );
+    const manifest = manifestEntry
+      ? ((await manifestEntry.json()) as { animations?: Array<{ id?: string; file?: string }> })
+      : null;
+
+    const animation = manifest?.animations?.[0];
+    let animationData: LottieAnimationData | null = null;
+
+    // Prefer the file declared in the manifest...
+    if (animation?.file) {
+      const fileEntry = findEntry(animation.file);
+      if (fileEntry) animationData = await fileEntry.json();
     }
-    
-    if (manifest) {
-      const animationUrl = (manifest as { animations?: Array<{ id: string; file: string }> }).animations?.[0]?.file;
-      if (animationUrl) {
-        for (const entry of Object.values(entries)) {
-          if (entry.name === animationUrl) {
-            animationData = await entry.json();
-            break;
-          }
-        }
-      }
+
+    // ...then the conventional `animations/<id>.json` path. Some manifests
+    // (e.g. Lottielab) only declare an id and omit the `file` field.
+    if (!animationData && animation?.id) {
+      const idEntry = findEntry(`animations/${animation.id}.json`);
+      if (idEntry) animationData = await idEntry.json();
     }
-    
+
+    // Deterministic fallback: first animation JSON, then first JSON in the archive.
+    if (!animationData) {
+      const jsonEntries = entryList
+        .filter((entry) => {
+          const name = normalizePath(entry.name);
+          return name.endsWith('.json') && !name.endsWith('manifest.json');
+        })
+        .sort((a, b) => normalizePath(a.name).localeCompare(normalizePath(b.name)));
+      const fallback =
+        jsonEntries.find((entry) => normalizePath(entry.name).includes('animations/')) ??
+        jsonEntries[0];
+      if (fallback) animationData = await fallback.json();
+    }
+
     if (!animationData) {
       throw new Error('Invalid .lottie file: no animation data found');
     }
@@ -76,7 +133,7 @@ const fetchAnimationData = async (src: string, objectUrls: string[]): Promise<ob
     if (animationData.assets && Array.isArray(animationData.assets)) {
       for (const asset of animationData.assets) {
         if (asset.p && typeof asset.p === 'string') {
-          const imageEntry = Object.values(entries).find(e => e.name.endsWith(asset.p));
+          const imageEntry = findEntry(`${asset.u ?? ''}${asset.p}`);
           if (imageEntry) {
             const blob = await imageEntry.blob();
             const objectUrl = URL.createObjectURL(blob);
@@ -96,7 +153,7 @@ const fetchAnimationData = async (src: string, objectUrls: string[]): Promise<ob
     throw new Error(`Failed to fetch animation: ${response.statusText}`);
   }
 
-  return await response.json();
+  return (await response.json()) as LottieAnimationData;
 };
 
 export function useDotLottie({
@@ -122,6 +179,7 @@ export function useDotLottie({
   const srcRef = useRef(src);
   const callbacksRef = useRef({ onLoad, onError, onComplete, onLoopComplete, onFrame, onEnterFrame });
   const configRef = useRef({ loop, speed, direction });
+  const autoplayRef = useRef(autoplay);
 
   useEffect(() => {
     srcRef.current = src;
@@ -153,6 +211,20 @@ export function useDotLottie({
     applyLiveConfig({ loop, speed, direction });
   }, [loop, speed, direction, applyLiveConfig]);
 
+  // `autoplay` drives the live animation and must not be a dependency of the
+  // load effect — including it there re-fetches src and restarts playback on
+  // every change. The ref also lets the DOMLoaded handler read the latest value.
+  useEffect(() => {
+    autoplayRef.current = autoplay;
+    const animation = animationRef.current;
+    if (!animation) return;
+    if (autoplay) {
+      animation.play();
+    } else {
+      animation.pause();
+    }
+  }, [autoplay]);
+
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -166,15 +238,22 @@ export function useDotLottie({
     let destroyed = false;
 
     const loadAnimation = async () => {
+      const localUrls: string[] = [];
+      let committed = false;
       try {
         if (destroyed) return;
 
         objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
         objectUrlsRef.current = [];
 
-        const animationData = await fetchAnimationData(srcRef.current, objectUrlsRef.current);
+        const animationData = await fetchAnimationData(srcRef.current, localUrls);
 
         if (destroyed || !containerRef.current) return;
+
+        // Take ownership of the object URLs only once this load is committed, so
+        // that an aborted or failed load releases everything it created.
+        objectUrlsRef.current = localUrls;
+        committed = true;
 
         if (animationRef.current) {
           animationRef.current.destroy();
@@ -186,14 +265,9 @@ export function useDotLottie({
           renderer: 'svg' as const,
           autoplay: false,
           animationData,
-          rendererSettings: {
-            clearCanvas: true,
-            contextCare: true,
-            progressiveDraw: true,
-          },
         };
 
-        animation = lottie.loadAnimation(config as Parameters<typeof lottie.loadAnimation>[0]);
+        animation = lottie.loadAnimation(config);
         animationRef.current = animation;
 
         applyLiveConfig(configRef.current);
@@ -202,7 +276,7 @@ export function useDotLottie({
           setIsLoaded(true);
           callbacksRef.current.onLoad?.();
 
-          if (autoplay) {
+          if (autoplayRef.current) {
             animation?.play();
           }
         });
@@ -217,27 +291,31 @@ export function useDotLottie({
         });
 
         animation.addEventListener('enterFrame', (e) => {
-          const frame = (e as { currentTime: number }).currentTime;
+          const frame = e.currentTime;
           currentFrameRef.current = frame;
           callbacksRef.current.onFrame?.(frame);
           callbacksRef.current.onEnterFrame?.(frame);
         });
 
-        animation.addEventListener('play' as any, () => {
+        onLifecycle(animation, 'play', () => {
           setIsPlaying(true);
         });
 
-        animation.addEventListener('pause' as any, () => {
+        onLifecycle(animation, 'pause', () => {
           setIsPlaying(false);
         });
 
-        animation.addEventListener('stop' as any, () => {
+        onLifecycle(animation, 'stop', () => {
           setIsPlaying(false);
           currentFrameRef.current = 0;
         });
 
       } catch (error) {
         callbacksRef.current.onError?.(error as Error);
+      } finally {
+        if (!committed) {
+          localUrls.forEach((url) => URL.revokeObjectURL(url));
+        }
       }
     };
 
@@ -247,10 +325,12 @@ export function useDotLottie({
       destroyed = true;
       animation?.destroy();
       animationRef.current = null;
+      objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+      objectUrlsRef.current = [];
       setIsLoaded(false);
       setIsPlaying(false);
     };
-  }, [src, autoplay, applyLiveConfig]);
+  }, [src, applyLiveConfig]);
 
   const play = useCallback(() => {
     animationRef.current?.play();
@@ -288,6 +368,8 @@ export function useDotLottie({
 
   const getCurrentFrame = useCallback(() => currentFrameRef.current, []);
 
+  const getAnimation = useCallback(() => animationRef.current, []);
+
   const destroy = useCallback(() => {
     animationRef.current?.destroy();
     animationRef.current = null;
@@ -311,7 +393,7 @@ export function useDotLottie({
     isLoaded,
     isPlaying,
     getCurrentFrame,
+    getAnimation,
     containerRef,
-    animationData: animationRef.current,
   };
 }

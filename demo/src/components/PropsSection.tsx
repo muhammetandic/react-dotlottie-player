@@ -37,6 +37,42 @@ export function PropsSection() {
       desc: "Container background",
     },
     {
+      name: "id",
+      type: "string",
+      desc: "Container element id",
+    },
+    {
+      name: "className",
+      type: "string",
+      desc: "Container class name",
+    },
+    {
+      name: "style",
+      type: "React.CSSProperties",
+      desc: "Inline styles for the container",
+    },
+    {
+      name: "role",
+      type: "React.AriaRole",
+      default: "'img'",
+      desc: "Accessible role for the container",
+    },
+    {
+      name: "aria-label",
+      type: "string",
+      desc: "Accessible label for the animation",
+    },
+    {
+      name: "aria-hidden",
+      type: "boolean",
+      desc: "Hide from assistive tech (decorative)",
+    },
+    {
+      name: "playerRef",
+      type: "Ref<DotLottiePlayerRef>",
+      desc: "Imperative playback controls",
+    },
+    {
       name: "onLoad",
       type: "() => void",
       desc: "Callback when animation loads",
@@ -58,6 +94,11 @@ export function PropsSection() {
     },
     {
       name: "onFrame",
+      type: "(frame: number) => void",
+      desc: "Callback on each frame",
+    },
+    {
+      name: "onEnterFrame",
       type: "(frame: number) => void",
       desc: "Callback on each frame",
     },

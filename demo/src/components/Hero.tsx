@@ -2,7 +2,7 @@ export function Hero() {
   return (
     <header className="hero">
       <div className="container">
-        <div className="hero-badge">v0.1.3</div>
+        <div className="hero-badge">v0.1.6</div>
         <h1>React DotLottie Player</h1>
         <p>
           Play Lottie animations in React — supports both <code>.json</code> and{" "}

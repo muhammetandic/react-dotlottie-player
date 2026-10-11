@@ -9,6 +9,9 @@ const production = !process.env.ROLLUP_WATCH;
 
 const onwarn = (warning, warn) => {
   if (warning.code === 'EVAL') return;
+  // The `"use client"` directive is re-added via `output.banner` below because
+  // Rollup ignores module-level directives when bundling.
+  if (warning.code === 'MODULE_LEVEL_DIRECTIVE') return;
   warn(warning);
 };
 
@@ -19,6 +22,7 @@ export default [
       file: 'dist/react-dotlottie-player.esm.js',
       format: 'esm',
       sourcemap: true,
+      banner: '"use client";',
     },
     onwarn,
     plugins: [
@@ -34,7 +38,7 @@ export default [
         tsconfig: './tsconfig.json',
         outputToFilesystem: true,
       }),
-      production && terser(),
+      production && terser({ compress: { directives: false } }),
     ],
     external: ['react', 'react-dom', 'react/jsx-runtime'],
   },
@@ -45,6 +49,7 @@ export default [
       format: 'cjs',
       sourcemap: true,
       exports: 'named',
+      banner: '"use client";',
     },
     onwarn,
     plugins: [
@@ -56,7 +61,7 @@ export default [
         tsconfig: './tsconfig.json',
         outputToFilesystem: true,
       }),
-      production && terser(),
+      production && terser({ compress: { directives: false } }),
     ],
     external: ['react', 'react-dom', 'react/jsx-runtime'],
   },

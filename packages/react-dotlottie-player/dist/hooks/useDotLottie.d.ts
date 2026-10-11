@@ -26,8 +26,8 @@ interface UseDotLottieReturn {
     isLoaded: boolean;
     isPlaying: boolean;
     getCurrentFrame: () => number;
+    getAnimation: () => AnimationItem | null;
     containerRef: React.RefObject<HTMLDivElement | null>;
-    animationData: AnimationItem | null;
 }
 export declare function useDotLottie({ src, loop, autoplay, speed, direction, backgroundColor, onLoad, onError, onComplete, onLoopComplete, onFrame, onEnterFrame, }: UseDotLottieOptions): UseDotLottieReturn;
 export {};
