@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   publish:
-    name: Build & publish
+    name: Build & stage
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -63,5 +63,19 @@ jobs:
       - name: Build
         run: npm run build --workspace=@mhmmt/react-dotlottie-player
 
-      - name: Publish to npm
-        run: npm publish --workspace=@mhmmt/react-dotlottie-player --access public --provenance
+      # Staged publishing: submits the package for review instead of publishing
+      # directly. A maintainer approves it with 2FA to make it live. Requires
+      # npm CLI >= 11.15.0 (Node 24 ships 11.19+).
+      - name: Stage package
+        run: npm stage publish --workspace=@mhmmt/react-dotlottie-player --access public --provenance
+
+      - name: Approval instructions
+        run: |
+          {
+            echo "### 📦 Package staged — awaiting approval"
+            echo ""
+            echo "A maintainer must approve this release with 2FA before it goes live:"
+            echo ""
+            echo "- npmjs.com → **@mhmmt/react-dotlottie-player** → **Staged Packages** → **Approve**"
+            echo "- or CLI: \`npm stage list @mhmmt/react-dotlottie-player\` then \`npm stage approve <stage-id>\`"
+          } >> "$GITHUB_STEP_SUMMARY"
