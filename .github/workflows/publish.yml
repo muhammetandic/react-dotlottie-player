@@ -1,0 +1,67 @@
+name: Publish to npm
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: npm-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Build & publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write # required for npm trusted publishing (OIDC) + provenance
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+        # NOTE: deliberately NOT setting `registry-url`. This workflow uses npm
+        # Trusted Publishing (OIDC) with no NODE_AUTH_TOKEN. setup-node would
+        # otherwise write `//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}`
+        # to .npmrc, and that empty token makes npm skip the OIDC exchange
+        # (failing with ENEEDAUTH / 404).
+
+      - name: Show tool versions
+        run: |
+          node --version
+          npm --version
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify release tag matches package version
+        if: github.event_name == 'release'
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          PKG_VERSION="$(node -p "require('./packages/react-dotlottie-player/package.json').version")"
+          TAG_VERSION="${RELEASE_TAG#v}"
+          echo "package.json version: $PKG_VERSION"
+          echo "release tag version:  $TAG_VERSION"
+          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error::Release tag (v$TAG_VERSION) does not match package.json version ($PKG_VERSION)."
+            exit 1
+          fi
+
+      - name: Typecheck
+        run: npm run typecheck --workspace=@mhmmt/react-dotlottie-player
+
+      - name: Build
+        run: npm run build --workspace=@mhmmt/react-dotlottie-player
+
+      - name: Publish to npm
+        run: npm publish --workspace=@mhmmt/react-dotlottie-player --access public --provenance
