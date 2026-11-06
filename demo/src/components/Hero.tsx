@@ -20,7 +20,7 @@ export function Hero() {
         <div className="hero-copy">
           <span className="hero-badge">
             <span className="pulse-dot" />
-            v0.1.6 · now on npm
+            v0.1.7 · now on npm
           </span>
 
           <h1>

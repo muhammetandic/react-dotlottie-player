@@ -180,6 +180,10 @@ export function useDotLottie({
   const callbacksRef = useRef({ onLoad, onError, onComplete, onLoopComplete, onFrame, onEnterFrame });
   const configRef = useRef({ loop, speed, direction });
   const autoplayRef = useRef(autoplay);
+  // Incremented whenever a load starts or is explicitly cancelled. Async work
+  // compares its captured value against this ref before touching the DOM or
+  // firing callbacks, so stale loads can never win.
+  const loadGenerationRef = useRef(0);
 
   useEffect(() => {
     srcRef.current = src;
@@ -234,21 +238,24 @@ export function useDotLottie({
   useEffect(() => {
     if (!src || !containerRef.current) return;
 
+    const generation = ++loadGenerationRef.current;
     let animation: AnimationItem | null = null;
     let destroyed = false;
+
+    const isCurrent = () => !destroyed && generation === loadGenerationRef.current;
 
     const loadAnimation = async () => {
       const localUrls: string[] = [];
       let committed = false;
       try {
-        if (destroyed) return;
+        if (!isCurrent()) return;
 
         objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
         objectUrlsRef.current = [];
 
         const animationData = await fetchAnimationData(srcRef.current, localUrls);
 
-        if (destroyed || !containerRef.current) return;
+        if (!isCurrent() || !containerRef.current) return;
 
         // Take ownership of the object URLs only once this load is committed, so
         // that an aborted or failed load releases everything it created.
@@ -273,6 +280,7 @@ export function useDotLottie({
         applyLiveConfig(configRef.current);
 
         animation.addEventListener('DOMLoaded', () => {
+          if (!isCurrent()) return;
           setIsLoaded(true);
           callbacksRef.current.onLoad?.();
 
@@ -282,15 +290,18 @@ export function useDotLottie({
         });
 
         animation.addEventListener('complete', () => {
+          if (!isCurrent()) return;
           setIsPlaying(false);
           callbacksRef.current.onComplete?.();
         });
 
         animation.addEventListener('loopComplete', () => {
+          if (!isCurrent()) return;
           callbacksRef.current.onLoopComplete?.();
         });
 
         animation.addEventListener('enterFrame', (e) => {
+          if (!isCurrent()) return;
           const frame = e.currentTime;
           currentFrameRef.current = frame;
           callbacksRef.current.onFrame?.(frame);
@@ -298,20 +309,25 @@ export function useDotLottie({
         });
 
         onLifecycle(animation, 'play', () => {
+          if (!isCurrent()) return;
           setIsPlaying(true);
         });
 
         onLifecycle(animation, 'pause', () => {
+          if (!isCurrent()) return;
           setIsPlaying(false);
         });
 
         onLifecycle(animation, 'stop', () => {
+          if (!isCurrent()) return;
           setIsPlaying(false);
           currentFrameRef.current = 0;
         });
 
       } catch (error) {
-        callbacksRef.current.onError?.(error as Error);
+        if (isCurrent()) {
+          callbacksRef.current.onError?.(error as Error);
+        }
       } finally {
         if (!committed) {
           localUrls.forEach((url) => URL.revokeObjectURL(url));
@@ -349,10 +365,12 @@ export function useDotLottie({
   }, []);
 
   const setSpeed = useCallback((newSpeed: number) => {
+    configRef.current = { ...configRef.current, speed: newSpeed };
     animationRef.current?.setSpeed(newSpeed);
   }, []);
 
   const setDirection = useCallback((newDirection: 1 | -1) => {
+    configRef.current = { ...configRef.current, direction: newDirection };
     animationRef.current?.setDirection(newDirection);
   }, []);
 
@@ -371,6 +389,8 @@ export function useDotLottie({
   const getAnimation = useCallback(() => animationRef.current, []);
 
   const destroy = useCallback(() => {
+    // Invalidate any in-flight load so it cannot resurrect the animation.
+    loadGenerationRef.current += 1;
     animationRef.current?.destroy();
     animationRef.current = null;
     setIsLoaded(false);

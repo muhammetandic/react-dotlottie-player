@@ -1,21 +1,22 @@
 {
   "name": "@mhmmt/react-dotlottie-player",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Play Lottie animations in React — supports both .json and .lottie files",
   "type": "module",
-  "main": "./dist/react-dotlottie-player.cjs.js",
+  "main": "./dist/react-dotlottie-player.cjs",
   "module": "./dist/react-dotlottie-player.esm.js",
   "types": "./dist/react-dotlottie-player.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/react-dotlottie-player.d.ts",
       "import": "./dist/react-dotlottie-player.esm.js",
-      "require": "./dist/react-dotlottie-player.cjs.js",
-      "types": "./dist/react-dotlottie-player.d.ts"
+      "require": "./dist/react-dotlottie-player.cjs"
     },
     "./package.json": "./package.json"
   },
   "files": [
-    "dist"
+    "dist",
+    "!dist/**/*.map"
   ],
   "sideEffects": false,
   "engines": {

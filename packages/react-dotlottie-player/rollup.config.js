@@ -45,7 +45,7 @@ export default [
   {
     input: 'src/index.ts',
     output: {
-      file: 'dist/react-dotlottie-player.cjs.js',
+      file: 'dist/react-dotlottie-player.cjs',
       format: 'cjs',
       sourcemap: true,
       exports: 'named',
