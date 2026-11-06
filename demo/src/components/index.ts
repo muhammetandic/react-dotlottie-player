@@ -2,6 +2,7 @@ export { TabGroup } from "./TabGroup";
 export { CodeBlock } from "./CodeBlock";
 export { Navigation } from "./Navigation";
 export { Hero } from "./Hero";
+export { FeaturesSection } from "./FeaturesSection";
 export { InstallationSection } from "./InstallationSection";
 export { UsageSection } from "./UsageSection";
 export { DemoCard } from "./DemoCard";

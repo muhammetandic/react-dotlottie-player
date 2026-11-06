@@ -1,6 +1,7 @@
 import {
   Navigation,
   Hero,
+  FeaturesSection,
   InstallationSection,
   UsageSection,
   DemosSection,
@@ -12,11 +13,14 @@ function App() {
   return (
     <div className="app">
       <Navigation />
-      <Hero />
-      <InstallationSection />
-      <UsageSection />
-      <DemosSection />
-      <PropsSection />
+      <main>
+        <Hero />
+        <FeaturesSection />
+        <InstallationSection />
+        <UsageSection />
+        <DemosSection />
+        <PropsSection />
+      </main>
       <Footer />
     </div>
   );
