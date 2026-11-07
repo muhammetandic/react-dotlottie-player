@@ -63,13 +63,40 @@ jobs:
       - name: Build
         run: npm run build --workspace=@mhmmt/react-dotlottie-player
 
+      # A release/tag can be created after the version was already published
+      # (e.g. it was staged earlier via workflow_dispatch). In that case staging
+      # again fails with a version conflict, so detect it first and skip.
+      - name: Check if version is already on npm
+        id: npm-version
+        run: |
+          PKG_NAME="$(node -p "require('./packages/react-dotlottie-player/package.json').name")"
+          PKG_VERSION="$(node -p "require('./packages/react-dotlottie-player/package.json').version")"
+          if npm view "${PKG_NAME}@${PKG_VERSION}" version >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "${PKG_NAME}@${PKG_VERSION} is already published — skipping staging."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "${PKG_NAME}@${PKG_VERSION} is not published yet — will stage."
+          fi
+
       # Staged publishing: submits the package for review instead of publishing
       # directly. A maintainer approves it with 2FA to make it live. Requires
       # npm CLI >= 11.15.0 (Node 24 ships 11.19+).
       - name: Stage package
+        if: steps.npm-version.outputs.exists != 'true'
         run: npm stage publish --workspace=@mhmmt/react-dotlottie-player --access public --provenance
 
+      - name: Already published
+        if: steps.npm-version.outputs.exists == 'true'
+        run: |
+          {
+            echo "### ✅ Already published"
+            echo ""
+            echo "This version is already live on npm, so no staging was needed."
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Approval instructions
+        if: steps.npm-version.outputs.exists != 'true'
         run: |
           {
             echo "### 📦 Package staged — awaiting approval"
